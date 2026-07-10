@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>壯圍看屋筆記＋檢查表</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<style>
+  :root{
+    --paper:#FAF6EE;
+    --paper-dim:#F1EAD9;
+    --ink:#2B2B28;
+    --ink-soft:#726C5E;
+    --line:#DCD2B8;
+    --blue:#35566F;
+    --blue-soft:#E6ECEF;
+    --brick:#B5503A;
+    --brick-soft:#F5E3DC;
+    --moss:#5C7A52;
+    --moss-soft:#E7EEE0;
+    --gold:#B8873F;
+    --gold-soft:#F3E9D2;
+    --grey:#9C9484;
+    --grey-soft:#EDE7D8;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Noto Sans TC',sans-serif;
+    line-height:1.7;
+    padding-bottom:70px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:0 20px 40px;}
+  #tab-check{max-width:640px;margin:0 auto;}
+  html{scroll-behavior:smooth;}
+
+  /* auth gate */
+  #authGate{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;
+    padding:24px;background:var(--paper);
+  }
+  .auth-card{
+    max-width:380px;width:100%;text-align:center;
+    background:#fff;border:1px solid var(--line);border-radius:6px;
+    padding:36px 28px;
+  }
+  .auth-card h1{font-size:22px;margin-bottom:10px;}
+  .auth-card p{font-size:13px;color:var(--ink-soft);line-height:1.6;margin-bottom:22px;}
+  .google-btn{
+    display:inline-flex;align-items:center;gap:10px;
+    padding:11px 22px;border-radius:4px;border:1px solid var(--line);
+    background:#fff;color:var(--ink);font-family:'Noto Sans TC',sans-serif;
+    font-size:14px;font-weight:700;cursor:pointer;
+  }
+  .google-btn:hover{background:var(--paper-dim);}
+  .auth-error{
+    margin-top:16px;padding:10px 12px;border-radius:4px;
+    background:var(--brick-soft);color:var(--brick);font-size:12.5px;
+    display:none;text-align:left;line-height:1.5;
+  }
+  .auth-loading{font-size:12.5px;color:var(--ink-soft);margin-top:14px;display:none;}
+  .signout-link{color:var(--ink-soft);text-decoration:underline;cursor:pointer;background:none;border:none;font-size:12px;font-family:inherit;}
+
+  header.masthead{
+    padding:30px 0 18px;
+    border-bottom:3px double var(--ink);
+    margin-bottom:18px;
+  }
+  .eyebrow{font-size:12px;letter-spacing:.16em;color:var(--ink-soft);margin-bottom:8px;}
+  h1{font-family:'Noto Serif TC',serif;font-weight:900;font-size:28px;margin:0 0 8px;}
+  .meta-line{font-size:12.5px;color:var(--ink-soft);}
+  .meta-line b{color:var(--ink);}
+
+  /* tabs */
+  .tab-bar{
+    display:flex;gap:8px;margin-bottom:20px;
+    border-bottom:1px solid var(--line);
+  }
+  .tab-btn{
+    flex:1;
+    padding:12px 8px;
+    font-family:'Noto Sans TC',sans-serif;
+    font-size:14px;
+    font-weight:700;
+    background:none;
+    border:none;
+    border-bottom:3px solid transparent;
+    color:var(--ink-soft);
+    cursor:pointer;
+  }
+  .tab-btn.active{color:var(--ink);border-bottom-color:var(--brick);}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+
+  /* live progress panel (notes tab) */
+  .progress-panel{
+    background:var(--paper-dim);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:14px 16px;
+    margin-bottom:24px;
+  }
+  .progress-title{font-size:11.5px;letter-spacing:.08em;color:var(--ink-soft);margin-bottom:10px;font-weight:700;}
+  .progress-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:5px 0;border-top:1px solid var(--line);}
+  .progress-row:first-of-type{border-top:none;}
+  .progress-value{font-weight:700;}
+  .progress-value.grey{color:var(--ink-soft);}
+  .progress-value.green{color:var(--moss);}
+  .progress-value.red{color:var(--brick);}
+  .progress-value.gold{color:var(--gold);}
+  .goto-btn{
+    margin-top:12px;width:100%;
+    padding:10px;border:none;border-radius:3px;
+    background:var(--blue);color:#fff;
+    font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;
+    cursor:pointer;
+  }
+
+  .notes-layout{display:flex;gap:30px;align-items:flex-start;}
+  .toc-sidebar{flex:0 0 176px;position:sticky;top:20px;align-self:flex-start;}
+  .notes-main{flex:1;min-width:0;}
+  @media (max-width:860px){
+    .notes-layout{flex-direction:column;}
+    .toc-sidebar{position:static;width:100%;flex:0 0 auto;}
+    .toc{margin-bottom:4px;}
+  }
+
+  .toc{
+    background:var(--paper-dim);border:1px solid var(--line);border-radius:4px;
+    padding:14px 16px;font-size:12.5px;
+  }
+  .toc-title{font-weight:700;font-size:11.5px;letter-spacing:.08em;color:var(--ink-soft);margin-bottom:8px;}
+  .toc a{color:var(--blue);text-decoration:none;display:block;padding:4px 0;}
+  .toc a:hover{text-decoration:underline;}
+  .toc a.active{font-weight:700;color:var(--brick);}
+  .toc-list{display:flex;flex-direction:column;gap:2px;}
+
+  section{margin-bottom:32px;scroll-margin-top:16px;}
+  h2{
+    font-family:'Noto Serif TC',serif;font-weight:700;font-size:18px;
+    margin:0 0 14px;padding-bottom:8px;border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:8px;
+  }
+  h3{font-size:14px;font-weight:700;margin:16px 0 8px;color:var(--ink);}
+
+  .fact-grid{
+    display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;
+    background:#fff;border:1px solid var(--line);border-radius:4px;
+    padding:16px 18px;font-size:13.5px;margin-bottom:6px;
+  }
+  .fact-grid div span{color:var(--ink-soft);display:block;font-size:11.5px;margin-bottom:2px;}
+
+  .callout{border-radius:4px;padding:12px 16px;margin:12px 0;font-size:13.5px;border-left:4px solid;}
+  .callout.tip{background:var(--blue-soft);border-color:var(--blue);}
+  .callout b{display:block;font-size:12px;margin-bottom:3px;color:var(--blue);}
+
+  .pros-cons{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:10px;}
+  .pc-box{border-radius:4px;padding:14px 16px;font-size:13.5px;}
+  .pc-box.pros{background:var(--moss-soft);}
+  .pc-box.cons{background:var(--brick-soft);}
+  .pc-box .pc-title{font-weight:700;font-size:12.5px;margin-bottom:8px;}
+  .pc-box.pros .pc-title{color:var(--moss);}
+  .pc-box.cons .pc-title{color:var(--brick);}
+  .pc-box ul{margin:0;padding-left:18px;}
+  .pc-box li{margin-bottom:5px;}
+
+  .check-text-list{background:#fff;border:1px solid var(--line);border-radius:4px;padding:6px 18px;margin-bottom:10px;}
+  .check-text-list ul{padding-left:20px;margin:10px 0;}
+  .check-text-list li{margin-bottom:7px;font-size:13.5px;}
+  .check-text-list li b{color:var(--ink);}
+
+  .gate-list{list-style:none;padding:0;margin:10px 0;}
+  .gate-list li{
+    padding:9px 12px;margin-bottom:6px;border-radius:3px;font-size:13.5px;
+    border-left:3px solid var(--grey);
+    background:var(--grey-soft);
+    color:var(--ink-soft);
+    transition:all .3s;
+  }
+  .gate-list li .gtag{font-weight:700;margin-right:6px;}
+  .gate-list li.g-pass{border-color:var(--moss);background:var(--moss-soft);color:var(--ink);}
+  .gate-list li.g-fail{border-color:var(--brick);background:var(--brick-soft);color:var(--ink);}
+
+  .todo-list{list-style:none;padding:0;margin:10px 0;}
+  .todo-list li{padding:8px 0;border-top:1px solid var(--paper-dim);font-size:13.5px;display:flex;gap:8px;}
+  .todo-list li:first-child{border-top:none;}
+  .todo-list li.done{color:var(--ink-soft);text-decoration:line-through;}
+
+  .back-top{display:inline-block;font-size:12px;color:var(--ink-soft);text-decoration:none;margin-top:6px;}
+
+  /* checklist tab specific */
+  .status-block{
+    display:flex;align-items:center;gap:16px;margin:0 0 22px;
+    padding:16px;background:var(--paper-dim);border:1px solid var(--line);border-radius:4px;
+  }
+  .stamp{
+    flex:0 0 78px;width:78px;height:78px;border-radius:50%;
+    border:3px double var(--grey);display:flex;align-items:center;justify-content:center;
+    text-align:center;font-family:'Noto Serif TC',serif;font-weight:900;font-size:13px;line-height:1.3;
+    color:var(--grey);transform:rotate(-8deg);transition:all .35s ease;letter-spacing:.05em;
+  }
+  .stamp.yellow{border-color:var(--gold);color:var(--gold);}
+  .stamp.green{border-color:var(--brick);color:var(--brick);box-shadow:0 0 0 1px var(--brick) inset;}
+  .status-text{flex:1;}
+  .status-title{font-weight:700;font-size:14.5px;margin-bottom:3px;}
+  .status-title.red{color:var(--brick);}
+  .status-title.yellow{color:var(--gold);}
+  .status-title.green{color:var(--moss);}
+  .status-desc{font-size:12.5px;color:var(--ink-soft);line-height:1.5;}
+  .status-sub{font-size:12px;color:var(--ink-soft);margin-top:6px;}
+
+  details.card{background:#fff;border:1px solid var(--line);border-radius:4px;margin-bottom:12px;overflow:hidden;}
+  summary{list-style:none;cursor:pointer;padding:14px 16px;display:flex;align-items:center;gap:10px;font-weight:700;font-size:14.5px;}
+  summary::-webkit-details-marker{display:none;}
+  summary .arrow{margin-left:auto;color:var(--ink-soft);font-size:12px;transition:transform .2s;}
+  details[open] summary .arrow{transform:rotate(180deg);}
+  .icon{font-size:16px;}
+  .section-body{padding:2px 16px 16px;}
+  .section-hint{font-size:12px;color:var(--ink-soft);margin:-4px 0 12px;line-height:1.5;}
+
+  .item{padding:12px 0;border-top:1px solid var(--paper-dim);}
+  .item:first-child{border-top:none;}
+  .item-label{font-size:13.5px;margin-bottom:8px;line-height:1.5;}
+
+  .toggle-row{display:flex;gap:6px;}
+  .toggle-btn{flex:1;padding:8px 4px;font-family:'Noto Sans TC',sans-serif;font-size:12px;border-radius:3px;border:1px solid var(--line);background:var(--grey-soft);color:var(--ink-soft);cursor:pointer;}
+  .toggle-btn.active-pass{background:var(--moss-soft);border-color:var(--moss);color:var(--moss);font-weight:700;}
+  .toggle-btn.active-fail{background:var(--brick-soft);border-color:var(--brick);color:var(--brick);font-weight:700;}
+  .toggle-btn.active-pending{background:var(--grey-soft);border-color:var(--grey);color:var(--ink-soft);font-weight:700;}
+
+  .slider-row{display:flex;align-items:center;gap:10px;}
+  input[type=range]{flex:1;-webkit-appearance:none;height:4px;border-radius:2px;background:linear-gradient(90deg,var(--brick),var(--gold),var(--moss));outline:none;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid var(--ink);cursor:pointer;}
+  input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid var(--ink);cursor:pointer;}
+  .slider-tag{flex:0 0 56px;text-align:center;font-size:11.5px;font-weight:700;padding:4px 2px;border-radius:3px;background:var(--blue-soft);color:var(--blue);}
+
+  select, input[type=text], input[type=number], textarea{
+    width:100%;font-family:'Noto Sans TC',sans-serif;font-size:13.5px;padding:9px 10px;
+    border:1px solid var(--line);border-radius:3px;background:var(--paper);color:var(--ink);
+  }
+  textarea{resize:vertical;min-height:56px;}
+  .field{margin-bottom:10px;}
+  .field label{display:block;font-size:12px;color:var(--ink-soft);margin-bottom:4px;}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .note-box{margin-top:10px;}
+  .note-box label{display:block;font-size:11.5px;color:var(--ink-soft);margin-bottom:4px;}
+
+  .ratio-flag{margin-top:8px;padding:8px 10px;border-radius:3px;font-size:12.5px;font-weight:700;}
+  .ratio-ok{background:var(--moss-soft);color:var(--moss);}
+  .ratio-warn{background:var(--brick-soft);color:var(--brick);}
+  .ratio-empty{background:var(--grey-soft);color:var(--ink-soft);font-weight:400;}
+
+  .todo-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-top:1px solid var(--paper-dim);}
+  .todo-row:first-child{border-top:none;}
+  .todo-row input{width:18px;height:18px;margin-top:1px;flex:0 0 auto;}
+  .todo-row span{font-size:13.5px;line-height:1.5;}
+
+  footer.bottom-bar{
+    position:fixed;bottom:0;left:0;right:0;background:var(--paper);border-top:1px solid var(--line);
+    padding:10px 16px;display:flex;gap:10px;justify-content:center;align-items:center;font-size:12px;color:var(--ink-soft);
+  }
+  .save-dot{width:7px;height:7px;border-radius:50%;background:var(--moss);display:inline-block;margin-right:5px;transition:background .3s;}
+  .reset-link{color:var(--brick);text-decoration:underline;cursor:pointer;background:none;border:none;font-size:12px;font-family:inherit;}
+
+  footer.foot{margin-top:30px;padding-top:16px;border-top:1px solid var(--line);font-size:11.5px;color:var(--ink-soft);text-align:center;}
+
+  @media print{.toc,.tab-bar,.back-top,.progress-panel .goto-btn{display:none;} body{background:#fff;padding-bottom:0;}}
+  @media (max-width:600px){.fact-grid,.pros-cons,.two-col{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<div id="authGate">
+  <div class="auth-card">
+    <h1>壯圍看屋筆記</h1>
+    <p>這份工具僅開放給指定的 Google 帳號查看，請用你受邀的 Google 帳號登入。</p>
+    <button class="google-btn" id="googleSignInBtn">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84c-.21 1.13-.85 2.08-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.81.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33C2.44 15.98 5.48 18 9 18z"/><path fill="#FBBC05" d="M3.97 10.72c-.18-.54-.28-1.12-.28-1.72s.1-1.18.28-1.72V4.95H.96C.35 6.17 0 7.55 0 9s.35 2.83.96 4.05l3.01-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0 5.48 0 2.44 2.02.96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/></svg>
+      使用 Google 帳號登入
+    </button>
+    <div class="auth-loading" id="authLoading">登入中...</div>
+    <div class="auth-error" id="authError"></div>
+  </div>
+</div>
+
+<div id="appContent" style="display:none;">
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">看屋筆記＋檢查表 · 東森房屋 朱哲賢 0913-525-838</div>
+    <h1>壯圍看屋筆記</h1>
+    <div class="meta-line">物件：<b>東森小朱 壯圍奢華精緻大露台2房車位華廈</b>　｜　總價 <b>988萬</b>　｜　權狀 <b>27.68坪</b></div>
+    <div class="meta-line">第一次看房：已完成　｜　第二次看房：<b>2026/07/14（週二）</b></div>
+  </header>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="notes">📖 筆記</button>
+    <button class="tab-btn" data-tab="check">✅ 檢查表</button>
+  </div>
+
+  <!-- ============ 筆記 TAB ============ -->
+  <div id="tab-notes" class="tab-panel active">
+
+    <div class="progress-panel">
+      <div class="progress-title">目前進度（與檢查表同步）</div>
+      <div class="progress-row"><span>必要條件</span><span class="progress-value grey" id="npGate">0 / 4 通過</span></div>
+      <div class="progress-row"><span>個人感受平均分數</span><span class="progress-value grey" id="npAvg">— / 5</span></div>
+      <div class="progress-row"><span>財務比例</span><span class="progress-value grey" id="npRatio">尚未輸入</span></div>
+      <button class="goto-btn" onclick="switchTab('check')">前往檢查表打勾 →</button>
+    </div>
+
+    <div class="notes-layout">
+      <nav class="toc-sidebar">
+        <div class="toc">
+          <div class="toc-title">本頁目錄</div>
+          <div class="toc-list">
+            <a href="#facts">01　物件基本資料</a>
+            <a href="#overall">02　目前整體判斷</a>
+            <a href="#gate">03　必要條件（底線）</a>
+            <a href="#light">04　採光重點</a>
+            <a href="#layout">05　格局檢查重點</a>
+            <a href="#pipe">06　管線檢查重點</a>
+            <a href="#mgmt">07　管理環境（社區體質）</a>
+            <a href="#area">08　生活機能與環境</a>
+            <a href="#finance">09　財務判斷框架</a>
+            <a href="#prep">10　隨身物品與心理建設</a>
+            <a href="#todo">11　簽約前待辦</a>
+          </div>
+        </div>
+      </nav>
+
+      <div class="notes-main">
+
+    <section id="facts">
+      <h2>01　物件基本資料</h2>
+      <div class="fact-grid">
+        <div><span>總價</span>988萬（含車位）</div>
+        <div><span>權狀坪數</span>27.68坪</div>
+        <div><span>單價（換算）</span>約35.7萬/坪</div>
+        <div><span>型態</span>電梯大樓（華廈）</div>
+        <div><span>格局</span>2房</div>
+        <div><span>裝潢程度</span>簡易裝潢</div>
+        <div><span>車位</span>平面式，已含售金內</div>
+        <div><span>管理費</span>1245元/月</div>
+        <div><span>特色</span>大露台、機車位</div>
+        <div><span>生活機能</span>近便利商店、傳統市場、學校、醫療機構、夜市</div>
+        <div><span>交通</span>近國道五號，約3公里到宜蘭轉運站；鄰近宜蘭火車站</div>
+        <div><span>刊登有效期</span>至 2026/07/27</div>
+      </div>
+      <a class="back-top" href="#">回目錄 ↑</a>
+    </section>
+
+    <section id="overall">
+      <h2>02　目前整體判斷</h2>
+      <div class="pros-cons">
+        <div class="pc-box pros">
+          <div class="pc-title">優點</div>
+          <ul>
+            <li>地段、生活機能好，市場／超商／學校／醫療都在附近</li>
+            <li>車位、機車位皆有，已含在總價內</li>
+            <li>有大露台，是這間房子的特色賣點</li>
+            <li>社區戶數單純、屋齡較新，適合自住</li>
+          </ul>
+        </div>
+        <div class="pc-box cons">
+          <div class="pc-title">待確認的疑慮</div>
+          <ul>
+            <li>客廳採光「普普」，非理想中的明亮狀態</li>
+            <li>露台是否為合法登記，需核對權狀</li>
+            <li>壯圍地勢低窪，需確認淹水史</li>
+            <li>簡易裝潢代表管線、收納可能還要自己額外花錢</li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout tip"><b>整體來說</b>優點多於缺點，但「採光」跟「露台合法性」這兩件事都不是靠感覺能決定的，是這次二訪最重要的任務。</div>
+      <a class="back-top" href="#">回目錄 ↑</a>
+    </section>
+
+    <section id="gate">
+      <h2>03　必要條件（底線，不打分數）</h2>
+      <p style="font-size:13.5px;color:var(--ink-soft);margin-top:-6px;">下面四項狀態會即時反映你在「檢查表」分頁的打勾結果。</p>
+      <ul class="gate-list">
+        <li data-gatenote="db1"><span class="gtag" data-gtag="db1">待確認</span>露台產權合法（權狀／使用執照與現況相符，非違建增建）</li>
+        <li data-gatenote="db2"><span class="gtag" data-gtag="db2">待確認</span>無重大結構問題（無嚴重壁癌／裂縫／漏水，或賣方願納入合約保固）</li>
+        <li data-gatenote="db3"><span class="gtag" data-gtag="db3">待確認</span>淹水史已問清楚，且風險在你能接受的範圍</li>
+        <li data-gatenote="db4"><span class="gtag" data-gtag="db4">待確認</span>產權清楚無糾紛（謄本無查封／抵押／共有人異常）</li>
+      </ul>
+      <a class="back-top" href="#">回目錄 ↑</a>
+    </section>
+
+    <section id="light">
+      <h2>04　採光重點</h2>
+      <div class="check-text-list">
+        <ul>
+          <li><b>座向</b>：南／東南通常全年最平均，正北偏暗</li>
+          <li><b>換個時段再看</b>：跟第一次不同的時段，光線角度差很多</li>
+          <li><b>棟距與遮蔽物</b>：對面建物、電線杆、大樹會不會擋光</li>
+          <li><b>待久一點感受</b>：在客廳待半小時以上再判斷</li>
+          <li><b>天氣</b>：盡量挑晴天看</li>
+        </ul>
+      </div>
+      <a class="back-top" href="#">回目錄 ↑</a>
+    </section>
+
+    <section id="layout">
+      <h2>05　格局檢查重點</h2>
+      <div class="check-text-list">
+        <h3>虛實坪</h3>
+        <ul><li>問清楚主建物、附屬建物（陽台／露台）、公設各多少坪</li></ul>
+        <h3>樑柱與空間</h3>
+        <ul><li>床、餐桌上方有無大樑或突出柱</li><li>房型是否方正</li></ul>
+        <h3>開窗與通風</h3>
+        <ul><li>兩房是否都有對外窗，有無暗房</li><li>至少要有兩面採光空氣才能對流，可請仲介／屋主把窗戶大門都打開，實際感受有無穿堂風</li></ul>
+        <h3>動線與收納</h3>
+        <ul><li>房間到浴室是否需穿越其他空間</li><li>衣櫃、儲藏、鞋櫃是否足夠</li></ul>
+      </div>
+      <div class="callout tip"><b>小技巧</b>帶捲尺量實際尺寸對照平面圖，帶手電筒斜照牆面更容易看出抓漏痕跡。</div>
+      <a class="back-top" href="#">回目錄 ↑</a>
+    </section>
+
+    <section id="pipe">
+      <h2>06　管線檢查重點</h2>
+      <div class="check-text-list">
+        <ul>
+          <li><b>電箱</b>：總安培數（建議至少50A以上），廚房／衛浴／冷氣是否獨立迴路，尤其廚房要能負荷微波爐、烤箱、冰箱等大功率電器</li>
+          <li><b>給排水</b>：牆角、天花板有無明管外露、生鏽、水漬；水槽下方有無霉味</li>
+          <li><b>水壓測試</b>：廚房、衛浴水龍頭開到最大，感受水流強度（尤其非低樓層更要注意）</li>
+          <li><b>排水測試</b>：倒水測排水孔速度；馬桶沖水是否異味回堵</li>
+          <li><b>維修孔檢查</b>：若天花板已封板（多在衛浴或廚房），打開維修孔用手機手電筒照，看水泥頂部有無滲水或白華（壁癌）</li>
+          <li><b>衛浴通風</b>：若無對外窗，確認排風扇／暖風機運作正常，抽風是排到管道間還是當層排放</li>
+          <li><b>瓦斯與熱水器</b>：明管或牆內；密閉浴室要注意通風排氣</li>
+          <li><b>屋齡與管線翻新</b>：問清楚實際屋齡、水電管線是否重新更新過，若20年以上未翻新要抓一筆全屋換管線的預算</li>
+          <li><b>其他孔位</b>：網路、第四台、冷氣排水孔是否足夠</li>
+        </ul>
+      </div>
+      <a class="back-top" href="#">回目錄 ↑</a>
+    </section>
+
+    <section id="mgmt">
+      <h2>07　管理環境（千金買屋，萬金買鄰）</h2>
+      <div class="check-text-list">
+        <ul>
+          <li><b>公共基金結餘</b>：問「一坪管理費多少？公共基金目前結餘大概多少？」，基金不足代表未來電梯故障或外牆維修可能要住戶另外集資</li>
+          <li><b>電梯保養告示</b>：確認保養公司、安檢紀錄是否按時張貼</li>
+          <li><b>垃圾集中場</b>：廚餘是否有專用冰箱、分類是否清楚、有無異味，這最能反映住戶素質與管理勤快程度</li>
+          <li><b>公告欄</b>：仔細看佈告欄，留意有無漏水糾紛、欠繳管理費名單等「紅旗」訊息</li>
+          <li><b>梯廳走道</b>：走廊有無堆放鞋櫃、腳踏車、雜物，塞滿代表管委會形同虛設，也有消防安全隱憂</li>
+        </ul>
+      </div>
+      <a class="back-top" href="#">回目錄 ↑</a>
+    </section>
+
+    <section id="area">
+      <h2>08　生活機能與環境</h2>
+      <div class="check-text-list">
+        <ul>
+          <li><b>噪音</b>：關窗後國道五號車流聲是否被隔絕，也可直接問「這條路車流量大嗎？晚上會不會有改裝車噪音？」</li>
+          <li><b>嫌惡設施</b>：周邊有無加油站、變電所、宮廟（活動時吵）、夜市或熱炒店（油煙、蟑螂問題）</li>
+          <li><b>淹水地勢</b>：壯圍屬蘭陽溪沖積平原，問屋主／鄰居淹水紀錄，或查水利署淹水潛勢地圖</li>
+          <li><b>鄰居噪音</b>：安靜站在客廳、臥室感受樓上聲響</li>
+        </ul>
+      </div>
+      <a class="back-top" href="#">回目錄 ↑</a>
+    </section>
+
+    <section id="finance">
+      <h2>09　財務判斷框架</h2>
+      <div class="check-text-list">
+        <ul>
+          <li><b>貸款成數與利率</b>：先找銀行估過額度，確認自備款付得出來</li>
+          <li><b>月付款佔收入比例</b>：常見參考原則不超過家庭月收入1/3</li>
+          <li><b>單價比對行情</b>：向仲介要實價登錄比對（這間約35.7萬/坪）</li>
+          <li><b>議價空間</b>：591刊登有效期至2026/07/27，可問是否快到期</li>
+          <li><b>預留裝修與意外支出</b>：簡易裝潢可能還要再花錢</li>
+        </ul>
+      </div>
+      <a class="back-top" href="#">回目錄 ↑</a>
+    </section>
+
+    <section id="prep">
+      <h2>10　隨身物品與心理建設</h2>
+      <div class="check-text-list">
+        <ul>
+          <li><b>隨身攜帶</b>：原子筆、一小包衛生紙（可撕一角丟馬桶測試沖水力道）、確認手機電量充足（方便拍照回家比對）、手電筒、捲尺</li>
+          <li><b>心理建設</b>：現場多聽多看少表態，就算很喜歡也避免表現出「勢在必得」，議價空間才不會被壓縮</li>
+          <li><b>三訪建議</b>：這次看完如果仍然心動，可以考慮找一個晚上8:00~9:30或下雨天自己再去附近走一趟——晚上能看社區點燈率（自住比例）、有無違停或噪音；雨天能看周邊道路排水、是否積水</li>
+        </ul>
+      </div>
+      <a class="back-top" href="#">回目錄 ↑</a>
+    </section>
+
+    <section id="todo">
+      <h2>11　簽約前待辦</h2>
+      <ul class="todo-list">
+        <li data-todonote="td1">找地政士（代書）確認產權、協助辦理過戶</li>
+        <li data-todonote="td2">請驗屋公司做結構／管線／抓漏檢測</li>
+        <li data-todonote="td3">確認交易走履約保證（價金信託）機制</li>
+      </ul>
+    </section>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============ 檢查表 TAB ============ -->
+  <div id="tab-check" class="tab-panel">
+
+    <div class="status-block">
+      <div class="stamp" id="stamp">尚未<br>驗收</div>
+      <div class="status-text">
+        <div class="status-title" id="statusTitle">必要條件尚未確認</div>
+        <div class="status-desc" id="statusDesc">先把下方「必要條件」四項確認完，才會知道這間房子有沒有資格繼續談下去。</div>
+        <div class="status-sub" id="statusSub"></div>
+      </div>
+    </div>
+
+    <details class="card" open>
+      <summary><span class="icon">🔑</span>必要條件（有一項不過就先別簽）<span class="arrow">▾</span></summary>
+      <div class="section-body">
+        <div class="section-hint">這四項是關卡，不打分數 —— 全部「通過」才代表這間房子有基本資格。</div>
+        <div class="item" data-toggle="db1"><div class="item-label">① 露台產權合法（權狀／使用執照與現況相符，非違建增建）</div><div class="toggle-row"></div></div>
+        <div class="item" data-toggle="db2"><div class="item-label">② 無重大結構問題（無嚴重壁癌／裂縫／漏水，或賣方願納入合約保固修復）</div><div class="toggle-row"></div></div>
+        <div class="item" data-toggle="db3"><div class="item-label">③ 淹水史已問清楚，且風險在你能接受的範圍</div><div class="toggle-row"></div></div>
+        <div class="item" data-toggle="db4"><div class="item-label">④ 產權清楚無糾紛（謄本無查封／抵押／共有人異常）</div><div class="toggle-row"></div></div>
+        <div class="note-box"><label>備註</label><textarea data-note="dealbreaker" placeholder="紀錄仲介的回答、需要補的文件..."></textarea></div>
+      </div>
+    </details>
+
+    <details class="card" open>
+      <summary><span class="icon">☀️</span>採光（你最在意的一項）<span class="arrow">▾</span></summary>
+      <div class="section-body">
+        <div class="section-hint">上次覺得「普普」，這次建議實際在客廳待久一點再打分。</div>
+        <div class="item"><div class="item-label">客廳實際採光感受</div>
+          <div class="slider-row"><input type="range" min="1" max="5" value="3" data-slider="lt1"><div class="slider-tag" data-slidertag="lt1">普通</div></div>
+        </div>
+        <div class="two-col">
+          <div class="field"><label>客廳座向</label>
+            <select data-field="orientation"><option value="">尚未確認</option><option>正南／東南（最佳）</option><option>正東</option><option>正西（注意西曬）</option><option>正北（偏暗）</option><option>其他／不確定</option></select>
+          </div>
+          <div class="field"><label>這次看房時段</label>
+            <select data-field="visittime"><option value="">尚未確認</option><option>上午</option><option>中午</option><option>下午</option><option>傍晚</option><option>晚上（無法判斷自然光）</option></select>
+          </div>
+        </div>
+        <div class="note-box"><label>備註</label><textarea data-note="lighting" placeholder="有無西曬／棟距擋光／跟第一次感覺是否不同..."></textarea></div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><span class="icon">🧱</span>格局<span class="arrow">▾</span></summary>
+      <div class="section-body">
+        <div class="item" data-toggle="lo1"><div class="item-label">虛實坪落差已問清楚</div><div class="toggle-row"></div></div>
+        <div class="item"><div class="item-label">樑柱位置／壓迫感（主臥床頭有無壓樑）</div><div class="slider-row"><input type="range" min="1" max="5" value="3" data-slider="lo2"><div class="slider-tag" data-slidertag="lo2">普通</div></div></div>
+        <div class="item"><div class="item-label">開窗與通風（至少兩面採光、有無穿堂風）</div><div class="slider-row"><input type="range" min="1" max="5" value="3" data-slider="lo3"><div class="slider-tag" data-slidertag="lo3">普通</div></div></div>
+        <div class="item"><div class="item-label">動線順暢度</div><div class="slider-row"><input type="range" min="1" max="5" value="3" data-slider="lo4"><div class="slider-tag" data-slidertag="lo4">普通</div></div></div>
+        <div class="item"><div class="item-label">收納規劃</div><div class="slider-row"><input type="range" min="1" max="5" value="3" data-slider="lo5"><div class="slider-tag" data-slidertag="lo5">普通</div></div></div>
+        <div class="item" data-toggle="lo6"><div class="item-label">屋齡與水電管線翻新狀況已問清楚</div><div class="toggle-row"></div></div>
+        <div class="note-box"><label>備註</label><textarea data-note="layout" placeholder="實際尺寸、異形空間、樑的位置..."></textarea></div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><span class="icon">🚰</span>管線<span class="arrow">▾</span></summary>
+      <div class="section-body">
+        <div class="section-hint">這些多半被裝潢蓋住看不到，但出問題最貴。</div>
+        <div class="item" data-toggle="pl1"><div class="item-label">電箱總安培數與各迴路已確認（含廚房大功率家電迴路）</div><div class="toggle-row"></div></div>
+        <div class="item" data-toggle="pl2"><div class="item-label">給排水管無漏水／生鏽／霉味</div><div class="toggle-row"></div></div>
+        <div class="item" data-toggle="pl6"><div class="item-label">水壓測試正常（水龍頭全開，水流夠強）</div><div class="toggle-row"></div></div>
+        <div class="item" data-toggle="pl3"><div class="item-label">排水速度測試正常</div><div class="toggle-row"></div></div>
+        <div class="item" data-toggle="pl7"><div class="item-label">維修孔已檢查（手電筒照天花板夾層有無滲水／白華）</div><div class="toggle-row"></div></div>
+        <div class="item" data-toggle="pl8"><div class="item-label">衛浴通風已確認（無對外窗時，排風扇／暖風機運作正常）</div><div class="toggle-row"></div></div>
+        <div class="item" data-toggle="pl4"><div class="item-label">瓦斯管線與熱水器通風安全已確認</div><div class="toggle-row"></div></div>
+        <div class="item" data-toggle="pl5"><div class="item-label">網路／第四台／冷氣預留孔位足夠</div><div class="toggle-row"></div></div>
+        <div class="note-box"><label>備註</label><textarea data-note="plumbing" placeholder="電箱型號、漏水痕跡位置、屋齡與管線翻新狀況..."></textarea></div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><span class="icon">🏢</span>管理環境（社區體質）<span class="arrow">▾</span></summary>
+      <div class="section-body">
+        <div class="section-hint">大樓的管理品質會直接影響未來居住品質與房子的保值程度。</div>
+        <div class="item" data-toggle="mg1"><div class="item-label">管委會運作與公共基金結餘已問清楚</div><div class="toggle-row"></div></div>
+        <div class="item" data-toggle="mg2"><div class="item-label">電梯保養／安檢告示正常</div><div class="toggle-row"></div></div>
+        <div class="item" data-toggle="mg3"><div class="item-label">垃圾集中場整潔、分類清楚</div><div class="toggle-row"></div></div>
+        <div class="item" data-toggle="mg4"><div class="item-label">公告欄無異常公告（無漏水糾紛／欠繳名單等紅旗訊息）</div><div class="toggle-row"></div></div>
+        <div class="item" data-toggle="mg5"><div class="item-label">梯廳走道暢通無雜物堆放（消防安全）</div><div class="toggle-row"></div></div>
+        <div class="note-box"><label>備註</label><textarea data-note="management" placeholder="公共基金餘額、公告欄看到的內容..."></textarea></div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><span class="icon">🏘️</span>生活機能與環境<span class="arrow">▾</span></summary>
+      <div class="section-body">
+        <div class="item"><div class="item-label">噪音可接受度（尤其國道五號車流、有無改裝車噪音）</div><div class="slider-row"><input type="range" min="1" max="5" value="3" data-slider="nb1"><div class="slider-tag" data-slidertag="nb1">普通</div></div></div>
+        <div class="item"><div class="item-label">生活機能滿足度</div><div class="slider-row"><input type="range" min="1" max="5" value="3" data-slider="nb2"><div class="slider-tag" data-slidertag="nb2">普通</div></div></div>
+        <div class="item"><div class="item-label">社區整體氛圍與觀感</div><div class="slider-row"><input type="range" min="1" max="5" value="3" data-slider="nb3"><div class="slider-tag" data-slidertag="nb3">普通</div></div></div>
+        <div class="item" data-toggle="nb4"><div class="item-label">周邊無明顯嫌惡設施（加油站／變電所／宮廟／夜市熱炒店油煙）</div><div class="toggle-row"></div></div>
+        <div class="note-box"><label>備註</label><textarea data-note="neighborhood" placeholder="鄰居互動、樓上腳步聲、附近設施狀況..."></textarea></div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><span class="icon">💰</span>財務條件<span class="arrow">▾</span></summary>
+      <div class="section-body">
+        <div class="section-hint">這裡不是打分數，是直接算數字。常見參考原則是月付款不超過家庭月收入1/3。</div>
+        <div class="two-col">
+          <div class="field"><label>預估貸款成數（%）</label><input type="number" data-field="loanpct" placeholder="例如 80"></div>
+          <div class="field"><label>預估月付款（元）</label><input type="number" data-field="monthlypay" placeholder="例如 25635"></div>
+        </div>
+        <div class="field"><label>家庭月收入（元）</label><input type="number" data-field="monthlyincome" placeholder="例如 80000"></div>
+        <div class="ratio-flag ratio-empty" id="ratioFlag">輸入月付款與月收入後，自動幫你算比例</div>
+        <div class="field" style="margin-top:14px;"><label>單價比對實價登錄結果</label>
+          <select data-field="pricecompare"><option value="">尚未比對</option><option>偏低（有議價空間或撿到便宜）</option><option>持平（符合行情）</option><option>偏高（需要議價或再考慮）</option></select>
+        </div>
+        <div class="note-box"><label>議價空間備註</label><textarea data-note="finance" placeholder="591顯示有效期到2026/07/27，可以問是否快到期..."></textarea></div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary><span class="icon">📋</span>簽約前的專業把關（待辦）<span class="arrow">▾</span></summary>
+      <div class="section-body">
+        <div class="todo-row"><input type="checkbox" data-todo="td1"><span>找地政士（代書）確認產權、協助辦理過戶</span></div>
+        <div class="todo-row"><input type="checkbox" data-todo="td2"><span>請驗屋公司做結構／管線／抓漏檢測</span></div>
+        <div class="todo-row"><input type="checkbox" data-todo="td3"><span>確認交易走履約保證（價金信託）機制</span></div>
+      </div>
+    </details>
+
+  </div>
+
+  <footer class="foot">整理自壯圍物件（591 編號 S20288627）與看屋討論內容　｜　僅供個人參考，非專業鑑定或財務建議</footer>
+
+</div>
+
+<footer class="bottom-bar">
+  <span><span class="save-dot" id="saveDot"></span><span id="saveText">已自動儲存在這台裝置</span></span>
+  <button class="reset-link" id="resetBtn">清空重來</button>
+  <button class="signout-link" id="signOutBtn">登出</button>
+</footer>
+</div>
+
+<script>
+/* ===================================================================
+   Firebase 設定區 —— 請依照下方步驟填入你自己的資料
+   1. 到 https://console.firebase.google.com 建立一個專案（或用你之前
+      馬拉松App用的專案也可以）
+   2. 左側選單 Authentication → Sign-in method → 啟用「Google」
+   3. 左側選單 Authentication → Settings → Authorized domains
+      把你要放這個檔案的網域加進去（例如 cathy10122-del.github.io）
+   4. 左側齒輪 Project settings → 一般 → 新增網頁應用程式，
+      複製那段 firebaseConfig 物件，貼到下面取代 REPLACE_ME 那些值
+   =================================================================== */
+const firebaseConfig = {
+  apiKey: "REPLACE_ME",
+  authDomain: "REPLACE_ME.firebaseapp.com",
+  projectId: "REPLACE_ME",
+  storageBucket: "REPLACE_ME.appspot.com",
+  messagingSenderId: "REPLACE_ME",
+  appId: "REPLACE_ME"
+};
+
+// 只有這裡列出的 Google 帳號 email 可以打開這份工具，其他人登入會被擋下來
+const ALLOWED_EMAILS = [
+  'cathy10122@gmail.com',
+  'friend-email@gmail.com'   // ← 換成你朋友的 Google 帳號 email
+];
+
+firebase.initializeApp(firebaseConfig);
+let currentUserEmail = null;
+
+function showAuthError(msg){
+  const el = document.getElementById('authError');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function hideAuthError(){
+  document.getElementById('authError').style.display = 'none';
+}
+
+document.getElementById('googleSignInBtn').addEventListener('click', () => {
+  hideAuthError();
+  document.getElementById('authLoading').style.display = 'block';
+  const provider = new firebase.auth.GoogleAuthProvider();
+  firebase.auth().signInWithPopup(provider).catch(err => {
+    document.getElementById('authLoading').style.display = 'none';
+    showAuthError('登入失敗：' + err.message);
+  });
+});
+
+document.getElementById('signOutBtn').addEventListener('click', () => {
+  firebase.auth().signOut();
+});
+
+firebase.auth().onAuthStateChanged(user => {
+  document.getElementById('authLoading').style.display = 'none';
+  if(user){
+    if(ALLOWED_EMAILS.includes(user.email)){
+      currentUserEmail = user.email;
+      hideAuthError();
+      document.getElementById('authGate').style.display = 'none';
+      document.getElementById('appContent').style.display = 'block';
+      load();
+    } else {
+      showAuthError('此帳號（' + user.email + '）尚未被授權查看這份工具，請確認登入的是受邀的 Google 帳號。');
+      firebase.auth().signOut();
+    }
+  } else {
+    currentUserEmail = null;
+    document.getElementById('authGate').style.display = 'flex';
+    document.getElementById('appContent').style.display = 'none';
+  }
+});
+
+/* 通用存檔：在 Claude 對話環境裡用 window.storage，
+   部署到 GitHub Pages 等外部網站時自動改用瀏覽器的 localStorage，
+   並依登入帳號分開存，同一台裝置換帳號登入也不會互相覆蓋 */
+function storageKey(){
+  return STORAGE_KEY + (currentUserEmail ? (':' + currentUserEmail) : '');
+}
+async function storageGet(){
+  const key = storageKey();
+  if(window.storage){
+    try{ return await window.storage.get(key, false); }catch(e){ return null; }
+  }
+  const raw = localStorage.getItem(key);
+  return raw ? { value: raw } : null;
+}
+async function storageSet(jsonValue){
+  const key = storageKey();
+  if(window.storage){
+    try{ return await window.storage.set(key, jsonValue, false); }catch(e){ throw e; }
+  }
+  localStorage.setItem(key, jsonValue);
+  return { value: jsonValue };
+}
+async function storageDelete(){
+  const key = storageKey();
+  if(window.storage){
+    try{ return await window.storage.delete(key, false); }catch(e){ /* ignore */ }
+    return;
+  }
+  localStorage.removeItem(key);
+}
+
+const STORAGE_KEY = 'zhuangwei-viewing-checklist-v1';
+
+const gateIds = ['db1','db2','db3','db4'];
+const otherToggleIds = ['lo1','lo6','pl1','pl2','pl3','pl4','pl5','pl6','pl7','pl8','mg1','mg2','mg3','mg4','mg5','nb4'];
+const sliderIds = ['lt1','lo2','lo3','lo4','lo5','nb1','nb2','nb3'];
+const noteKeys = ['dealbreaker','lighting','layout','plumbing','management','neighborhood','finance'];
+const fieldKeys = ['orientation','visittime','loanpct','monthlypay','monthlyincome','pricecompare'];
+const todoIds = ['td1','td2','td3'];
+const sliderLabels = ['','待加強','普通','尚可','良好','非常理想'];
+const gateShortLabels = {db1:'露台合法',db2:'無結構問題',db3:'淹水已釐清',db4:'產權清楚'};
+
+let state = { toggles:{}, sliders:{}, notes:{}, fields:{}, todos:{} };
+
+function switchTab(name){
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  if(name === 'notes') updateActiveTOC();
+}
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+});
+
+const notesSections = document.querySelectorAll('#tab-notes .notes-main section[id]');
+const tocLinks = document.querySelectorAll('.toc-sidebar a');
+function updateActiveTOC(){
+  let currentId = null;
+  notesSections.forEach(sec => {
+    if(sec.getBoundingClientRect().top <= 110) currentId = sec.id;
+  });
+  tocLinks.forEach(link => {
+    link.classList.toggle('active', link.getAttribute('href') === '#' + currentId);
+  });
+}
+window.addEventListener('scroll', () => {
+  if(document.getElementById('tab-notes').classList.contains('active')) updateActiveTOC();
+});
+
+function buildToggleRow(item){
+  const container = item.querySelector('.toggle-row');
+  const id = item.dataset.toggle;
+  const isGate = gateIds.includes(id);
+  const labels = isGate ? ['待確認','通過','不通過'] : ['待確認','正常','異常'];
+  const values = ['pending','pass','fail'];
+  values.forEach((val, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'toggle-btn';
+    btn.textContent = labels[i];
+    btn.dataset.value = val;
+    btn.addEventListener('click', () => {
+      state.toggles[id] = val;
+      renderToggle(id);
+      recompute();
+      save();
+    });
+    container.appendChild(btn);
+  });
+}
+
+function renderToggle(id){
+  const item = document.querySelector(`[data-toggle="${id}"]`);
+  if(!item) return;
+  const val = state.toggles[id] || 'pending';
+  item.querySelectorAll('.toggle-btn').forEach(btn => {
+    btn.classList.remove('active-pass','active-fail','active-pending');
+    if(btn.dataset.value === val) btn.classList.add('active-' + val);
+  });
+}
+
+function renderSlider(id){
+  const val = state.sliders[id] || 3;
+  const input = document.querySelector(`[data-slider="${id}"]`);
+  const tag = document.querySelector(`[data-slidertag="${id}"]`);
+  if(input) input.value = val;
+  if(tag) tag.textContent = sliderLabels[val];
+}
+
+function recompute(){
+  const gateVals = gateIds.map(id => state.toggles[id] || 'pending');
+  const anyFail = gateVals.includes('fail');
+  const allPass = gateVals.every(v => v === 'pass');
+  const passCount = gateVals.filter(v => v === 'pass').length;
+
+  const stamp = document.getElementById('stamp');
+  const title = document.getElementById('statusTitle');
+  const desc = document.getElementById('statusDesc');
+  const sub = document.getElementById('statusSub');
+
+  stamp.classList.remove('yellow','green');
+  if(anyFail){
+    stamp.innerHTML = '不予<br>考慮';
+    title.className = 'status-title red';
+    title.textContent = '有必要條件未過關';
+    desc.textContent = '至少一項必要條件標記「不過」。除非問題能被解決，否則不建議繼續談這間房子。';
+  } else if(allPass){
+    stamp.classList.add('green');
+    stamp.innerHTML = '初驗<br>合格';
+    title.className = 'status-title green';
+    title.textContent = '必要條件都過關了';
+    desc.textContent = '接下來可以認真看財務數字、以及你自己對採光／格局的感受能不能接受。';
+  } else {
+    stamp.classList.add('yellow');
+    stamp.innerHTML = '確認<br>中';
+    title.className = 'status-title yellow';
+    title.textContent = '必要條件尚未確認完畢';
+    desc.textContent = '把「必要條件」四項都問清楚並標記，才能知道這間房子有沒有繼續談下去的資格。';
+  }
+  const ratingVals = sliderIds.map(id => state.sliders[id] || 3);
+  const avg = (ratingVals.reduce((a,b)=>a+b,0) / ratingVals.length).toFixed(1);
+  sub.textContent = `個人感受平均分數：${avg} / 5（僅供你自己參考，不是及格線）`;
+
+  updateRatioFlag();
+  updateNotesSync(passCount, avg);
+  updateGateListInNotes();
+  updateTodoInNotes();
+}
+
+function updateRatioFlag(){
+  const flag = document.getElementById('ratioFlag');
+  const pay = parseFloat(state.fields.monthlypay);
+  const income = parseFloat(state.fields.monthlyincome);
+  if(!pay || !income){
+    flag.className = 'ratio-flag ratio-empty';
+    flag.textContent = '輸入月付款與月收入後，自動幫你算比例';
+    return;
+  }
+  const ratio = (pay / income * 100).toFixed(1);
+  if(pay/income > 0.33){
+    flag.className = 'ratio-flag ratio-warn';
+    flag.textContent = `月付款佔月收入 ${ratio}%，高於常見1/3參考值，務必再確認自己能否負擔`;
+  } else {
+    flag.className = 'ratio-flag ratio-ok';
+    flag.textContent = `月付款佔月收入 ${ratio}%，在常見1/3參考值以內`;
+  }
+}
+
+function updateNotesSync(passCount, avg){
+  const npGate = document.getElementById('npGate');
+  const npAvg = document.getElementById('npAvg');
+  const npRatio = document.getElementById('npRatio');
+
+  npGate.textContent = `${passCount} / 4 通過`;
+  npGate.className = 'progress-value ' + (passCount === 4 ? 'green' : (passCount === 0 ? 'grey' : 'gold'));
+
+  npAvg.textContent = `${avg} / 5`;
+  npAvg.className = 'progress-value grey';
+
+  const pay = parseFloat(state.fields.monthlypay);
+  const income = parseFloat(state.fields.monthlyincome);
+  if(!pay || !income){
+    npRatio.textContent = '尚未輸入';
+    npRatio.className = 'progress-value grey';
+  } else {
+    const ratio = (pay/income*100).toFixed(1);
+    npRatio.textContent = ratio + '%';
+    npRatio.className = 'progress-value ' + (pay/income > 0.33 ? 'red' : 'green');
+  }
+}
+
+function updateGateListInNotes(){
+  gateIds.forEach(id => {
+    const li = document.querySelector(`[data-gatenote="${id}"]`);
+    const tag = document.querySelector(`[data-gtag="${id}"]`);
+    if(!li || !tag) return;
+    const val = state.toggles[id] || 'pending';
+    li.classList.remove('g-pass','g-fail');
+    if(val === 'pass'){ li.classList.add('g-pass'); tag.textContent = '✓ 通過'; }
+    else if(val === 'fail'){ li.classList.add('g-fail'); tag.textContent = '✕ 不通過'; }
+    else { tag.textContent = '待確認'; }
+  });
+}
+
+function updateTodoInNotes(){
+  todoIds.forEach(id => {
+    const li = document.querySelector(`[data-todonote="${id}"]`);
+    if(!li) return;
+    li.classList.toggle('done', !!state.todos[id]);
+  });
+}
+
+function initDom(){
+  document.querySelectorAll('[data-toggle]').forEach(buildToggleRow);
+  [...gateIds, ...otherToggleIds].forEach(id => { if(!state.toggles[id]) state.toggles[id] = 'pending'; renderToggle(id); });
+
+  sliderIds.forEach(id => {
+    if(!state.sliders[id]) state.sliders[id] = 3;
+    renderSlider(id);
+    const input = document.querySelector(`[data-slider="${id}"]`);
+    input.addEventListener('input', (e) => {
+      state.sliders[id] = parseInt(e.target.value);
+      renderSlider(id);
+      recompute();
+      save();
+    });
+  });
+
+  noteKeys.forEach(key => {
+    const el = document.querySelector(`[data-note="${key}"]`);
+    if(!el) return;
+    el.value = state.notes[key] || '';
+    let t;
+    el.addEventListener('input', (e) => {
+      state.notes[key] = e.target.value;
+      clearTimeout(t);
+      t = setTimeout(save, 400);
+    });
+  });
+
+  fieldKeys.forEach(key => {
+    const el = document.querySelector(`[data-field="${key}"]`);
+    if(!el) return;
+    el.value = state.fields[key] || '';
+    let t;
+    el.addEventListener('input', (e) => {
+      state.fields[key] = e.target.value;
+      clearTimeout(t);
+      t = setTimeout(() => { recompute(); save(); }, 300);
+    });
+    el.addEventListener('change', (e) => {
+      state.fields[key] = e.target.value;
+      recompute();
+      save();
+    });
+  });
+
+  todoIds.forEach(id => {
+    const el = document.querySelector(`[data-todo="${id}"]`);
+    if(!el) return;
+    el.checked = !!state.todos[id];
+    el.addEventListener('change', (e) => {
+      state.todos[id] = e.target.checked;
+      recompute();
+      save();
+    });
+  });
+
+  recompute();
+  updateActiveTOC();
+}
+
+async function load(){
+  try{
+    const result = await storageGet();
+    if(result && result.value){
+      const parsed = JSON.parse(result.value);
+      state = Object.assign(state, parsed);
+    }
+  }catch(e){ /* start fresh */ }
+  initDom();
+}
+
+async function save(){
+  const dot = document.getElementById('saveDot');
+  const text = document.getElementById('saveText');
+  try{
+    await storageSet(JSON.stringify(state));
+    text.textContent = '已自動儲存在這台裝置';
+    dot.style.background = 'var(--moss)';
+  }catch(e){
+    text.textContent = '儲存失敗，請確認網路後重試';
+    dot.style.background = 'var(--brick)';
+  }
+}
+
+document.getElementById('resetBtn').addEventListener('click', async () => {
+  if(!confirm('確定要清空所有紀錄重新開始嗎？')) return;
+  state = {toggles:{}, sliders:{}, notes:{}, fields:{}, todos:{}};
+  try{ await storageDelete(); }catch(e){}
+  location.reload();
+});
+</script>
+</body>
+</html>
